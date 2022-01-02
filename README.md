@@ -1,4 +1,7 @@
-# Nginx reverse proxy
+# Nginx reverse proxy Ansible role
+
+Nginx reverse proxy and load balancer Ansible role with Let's Encrypt. 
+ 
 ## Example
 
 ```yaml
