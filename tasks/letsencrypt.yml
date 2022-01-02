@@ -1,0 +1,86 @@
+---
+
+- name: Install certbot
+  apt:
+    name: certbot
+    state: present
+
+- name: Get Active Sites
+  command: ls -1 /etc/nginx/sites-enabled/
+  changed_when: "active.stdout_lines != nginx_reverse_proxy_sites.keys()|sort()"
+  check_mode: false
+  register: active
+
+- name: Create certbot WebRoot
+  file:
+    dest: /var/www/certbot
+    mode: 0775
+    state: directory
+    owner: www-data
+    group: www-data
+  when:
+    - nginxinstalled is success
+    - item.value.letsencrypt | default(False)
+
+- name: Enable sites for ACME protocol
+  block:
+    - name: Add Https Site Config
+      template:
+        src: reverse_proxy.conf.j2
+        dest: /etc/nginx/sites-enabled/{{ item.key }}
+        owner: root
+        group: root
+        mode: 0640
+      with_dict: "{{ nginx_reverse_proxy_sites }}"
+      vars:
+        # Snakeoil cert on first run.
+        __skip_letsencrypt: true
+      register: siteconfig
+      when:
+        - item.value.letsencrypt | default(False)
+        - item.key not in active.stdout_lines
+
+    - name: Reload Nginx
+      service:
+        name: nginx
+        state: reloaded
+      when:
+        - siteconfig is success
+  when:
+    - active.changed
+    - nginxinstalled is success
+
+- name: Generate certs (first time)
+  # Comment "creates=" line if the cert content need regenerate, e.g.: cert content expands.
+  command: |
+    certbot certonly
+    --webroot -w /var/www/certbot
+    -d {{ item.value.domains | join(' -d ') }}
+    --email {{ item.value.letsencrypt_email }}
+    --non-interactive --expand
+    --cert-name {{ item.key }}
+    --agree-tos
+    creates=/etc/letsencrypt/live/{{ item.key }}/fullchain.pem
+  with_dict: "{{ nginx_reverse_proxy_sites }}"
+  notify: Reload Nginx
+  when: item.value.letsencrypt | default(False)
+
+- name: Update Site Config
+  template:
+    src: reverse_proxy.conf.j2
+    dest: /etc/nginx/sites-enabled/{{ item.key }}
+    owner: root
+    group: root
+    mode: 0640
+  with_dict: "{{ nginx_reverse_proxy_sites }}"
+  notify: Reload Nginx
+  when:
+    - item.value.letsencrypt | default(False)
+
+- name: Insert cert-bot renew in crontab
+  cron:
+    name: "cert-bot renew"
+    job: "certbot renew --post-hook \"systemctl reload nginx\" >> /var/log/letsencrypt/letsencrypt-update.log 2>&1"
+    hour: "3"
+    minute: "30"
+    weekday: "1"

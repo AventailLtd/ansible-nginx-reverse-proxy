@@ -1,0 +1,83 @@
+---
+
+- name: Install Nginx and ssl-cert
+  apt:
+    name:
+      - nginx
+      - ssl-cert
+    state: present
+  register:
+    nginxinstalled
+
+- name: Install apache2 utils for base auth
+  apt:
+    name: apache2-utils
+    state: present
+
+- name: Install python-passlib
+  apt:
+    name: python3-passlib
+    state: present
+
+- name: Add a user to a password file
+  community.general.htpasswd:
+    path: /etc/nginx/passwdfile
+    name: "{{ nginx_htpasswd_username }}"
+    password: "{{ nginx_htpasswd_password }}"
+    owner: root
+    group: www-data
+    mode: 0640
+
+- name: Set up nginx directories
+  file:
+    path: "/etc/nginx/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0640
+  with_items:
+    - sites-enabled
+
+- name: Add configs
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/nginx/conf.d/{{ item }}"
+    owner: root
+    group: root
+    mode: 0640
+  with_items:
+    - "001_log.conf"
+    - "002_proxy.conf"
+    - "003_gzip.conf"
+  notify: Reload Nginx
+
+- name: Add Site Config
+  template:
+    src: reverse_proxy.conf.j2
+    dest: /etc/nginx/sites-enabled/{{ item.key }}
+    owner: root
+    group: root
+    mode: 0640
+  with_dict: "{{ nginx_reverse_proxy_sites }}"
+  notify: Reload Nginx
+  when:
+    - nginxinstalled is success
+    - not item.value.letsencrypt | default(False)
+
+- name: Get Active Sites
+  command: ls -1 /etc/nginx/sites-enabled/
+  changed_when: "active.stdout_lines != nginx_reverse_proxy_sites.keys()|sort()"
+  check_mode: false
+  register: active
+
+- name: De-activate Sites
+  file:
+    path: /etc/nginx/sites-enabled/{{ item }}
+    state: absent
+  with_items: "{{ active.stdout_lines }}"
+  notify: Reload Nginx
+  when:
+    - item not in nginx_reverse_proxy_sites
+    - nginx_revproxy_de_activate_sites
+
+- include_tasks: letsencrypt.yml

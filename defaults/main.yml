@@ -1,0 +1,8 @@
+---
+
+# De-activate Sites
+nginx_revproxy_de_activate_sites: true
+
+# Base auth username and password
+nginx_htpasswd_username: demo
+nginx_htpasswd_password: demo1
