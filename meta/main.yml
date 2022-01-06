@@ -1,0 +1,18 @@
+galaxy_info:
+  role_name: nginx-reverse-proxy
+  company: Aventail Ltd.
+  description: Nginx reverse proxy and load balancer Ansible role with Let's Encrypt.
+  license: MIT
+  min_ansible_version: 2.8.0
+  platforms:
+    - name: Ubuntu
+      versions:
+        - xenial
+        - bionic
+        - focal
+    - name: Debian
+      versions:
+        - jessie
+        - stretch
+        - buster
+dependencies: []
