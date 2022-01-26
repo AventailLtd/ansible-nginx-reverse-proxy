@@ -46,6 +46,11 @@ server {
 
    location / {
 {% if item.value.auth is defined and item.value.auth %}
+      satisfy any;
+{% for ip in item.value.ip_whitelist|default([]) %}
+      allow {{ ip }};
+{% endfor %}
+      deny all;
       auth_basic Admin;
       auth_basic_user_file /etc/nginx/passwdfile;
 {% endif %}

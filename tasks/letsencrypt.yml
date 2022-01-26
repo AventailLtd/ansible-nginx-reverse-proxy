@@ -20,7 +20,6 @@
     group: www-data
   when:
     - nginxinstalled is success
-    - item.value.letsencrypt | default(False)
 
 - name: Enable sites for ACME protocol
   block:
