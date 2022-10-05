@@ -28,3 +28,8 @@ nginx_reverse_proxy_sites:
     # Set email for letencrypt cert
     letsencrypt_email: ""
 ```
+
+## Add new domain alternative
+
+If you add a new domain alternative, the cert content must be regenerated:
+ - Comment "creates=" line from "Generate certs" task. (https://github.com/AventailLtd/ansible-nginx-reverse-proxy/blob/main/tasks/letsencrypt.yml#L53)
