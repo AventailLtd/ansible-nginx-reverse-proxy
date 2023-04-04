@@ -13,7 +13,7 @@ server {
 {% endif %}
 
 server {
-{% if not item.value.redirect_http %}
+{% if item.value.redirect_http is not defined or not item.value.redirect_http %}
    listen {{ item.value.listen | default(80) }};
    listen [::]:{{ item.value.listen | default(80) }};
 {% endif %}
@@ -70,8 +70,8 @@ server {
       proxy_pass {{ item.value.backend_protocol | default('http') }}://{{ item.key }}_backend;
       proxy_next_upstream_timeout {{ item.value.proxy_next_upstream_timeout | default(0) }};
 
-{% config in item.value.extra_configs | default([]) %}
-      {{ config }}
+{% for extra_config in item.value.extra_configs | default([]) %}
+      {{ extra_config }}
 {% endfor %}
    }
 }
