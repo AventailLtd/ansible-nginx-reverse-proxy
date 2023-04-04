@@ -27,6 +27,11 @@ nginx_reverse_proxy_sites:
     letsencrypt: true
     # Set email for letencrypt cert
     letsencrypt_email: ""
+    # Auto redirect http site to https
+    redirect_http: true
+    extra_configs:
+      - "proxy_set_header X-Forwarded-Host $host;"
+      - "proxy_set_header X-Forwarded-Proto $scheme;"
 ```
 
 ## Add new domain alternative

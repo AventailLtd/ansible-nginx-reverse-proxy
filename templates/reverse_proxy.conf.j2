@@ -4,9 +4,19 @@ upstream {{ item.key }}_backend  {
 {% endfor %}
 }
 
+{% if item.value.redirect_http is defined and item.value.redirect_http %}
 server {
+    listen {{ item.value.listen | default(80) }};
+    server_name {{ item.value.domains | join(' ') }};
+    return 301 https://$host$request_uri;
+}
+{% endif %}
+
+server {
+{% if not item.value.redirect_http %}
    listen {{ item.value.listen | default(80) }};
    listen [::]:{{ item.value.listen | default(80) }};
+{% endif %}
 {% if item.value.ssl is defined and item.value.ssl %}
    listen {{ item.value.listen_ssl | default(443) }} ssl http2;
    listen [::]:{{ item.value.listen_ssl | default(443) }} ssl http2;
@@ -47,7 +57,7 @@ server {
    location / {
 {% if item.value.auth is defined and item.value.auth %}
       satisfy any;
-{% for ip in item.value.ip_whitelist|default([]) %}
+{% for ip in item.value.ip_whitelist | default([]) %}
       allow {{ ip }};
 {% endfor %}
       deny all;
@@ -59,5 +69,9 @@ server {
       proxy_read_timeout {{ item.value.proxy_read_timeout | default('300') }};
       proxy_pass {{ item.value.backend_protocol | default('http') }}://{{ item.key }}_backend;
       proxy_next_upstream_timeout {{ item.value.proxy_next_upstream_timeout | default(0) }};
+
+{% config in item.value.extra_configs | default([]) %}
+      {{ config }}
+{% endfor %}
    }
 }
